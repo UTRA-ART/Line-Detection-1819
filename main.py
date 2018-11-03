@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 
+
 # helper functions
 def grayscale(img):
     '''Applies the grayscale Transform
@@ -37,7 +38,38 @@ def houghLines(image, rho, theta, threshold, minLength, maxGap):
 
 
 if __name__ == '__main__':
-    image = cv2.imread('images/0.jpg')
-    gray_image = cv2.cvtColor(image,cv2.COLOR_RGB2GRAY)
-    cv2.imshow('image', gray_image)
-    cv2.waitKey(0)
+    # reading in the image
+    image_name = '0.jpg'
+    image = cv2.imread('images/'+image_name)
+    # color threshold to extract a range of white colors only that is associated with the lines on the ground
+    low_threshold = 120
+    high_threshold = 200
+    lower_white = np.array([low_threshold,low_threshold,low_threshold])
+    upper_white = np.array([high_threshold,high_threshold,high_threshold])
+    mask = cv2.inRange(image,lower_white,upper_white)
+    masked_image = cv2.bitwise_and(image,image,mask=mask)
+    # converting the masked image to gray scale
+    grayImage = grayscale(masked_image)
+
+    # applying guassian blur to the grayScale Image
+    kernel_size = 5
+    blurredImage = gaussianBlur(grayImage,kernel_size)
+
+    # applying canny edge detection (using automatic mean value thresholding)
+    median_value = np.median(blurredImage)
+    sigma = 0.33
+    low_threshold = int(max(0, (1 - sigma) * median_value))
+    high_threshold = int(min(255, (1 + sigma) * median_value))
+    edges = canny(blurredImage, low_threshold, high_threshold)
+
+    # performing hough transform
+    theta = np.pi / 180
+    rho = 1
+    threshold = 40
+    minLen = 50
+    maxGap = 20
+    houghImage = houghLines(edges, rho, theta, threshold, minLen, maxGap)
+    imageToSave = cv2.cvtColor(houghImage, cv2.COLOR_RGB2BGR)
+    cv2.imwrite('output_images/'+image_name,imageToSave)
+
+
