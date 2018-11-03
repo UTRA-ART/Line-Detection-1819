@@ -3,5 +3,5 @@ Line detection for the autonomous rover 2018
 Input:
 <img src="images/0.jpg">
 Output:
-<img scr="images/0.jpg">
+<img scr="images/1.jpg">
 
