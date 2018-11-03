@@ -6,5 +6,5 @@ Input:
 </p>
 <p align="center">
 Output:
-<img scr="output-images/0.jpg">
+<img scr="output_images/0.jpg">
 </p>
