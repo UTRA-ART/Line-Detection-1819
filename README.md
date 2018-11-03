@@ -1,7 +1,9 @@
 # ART_Line_Detection
 Line detection for the autonomous rover 2018
 Input:
-<img src="images/0.jpg">
+![alt inputimage](https://github.com/UTRA-ART/ART_Line_Detection/blob/master/images/0.jpg)
 Output:
-<img scr="images/1.jpg">
+![alt outputimage](https://github.com/UTRA-ART/ART_Line_Detection/blob/master/output_images/0.jpg)
+
+
 
