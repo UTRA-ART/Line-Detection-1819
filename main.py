@@ -41,6 +41,13 @@ if __name__ == '__main__':
     # reading in the image
     image_name = '0.jpg'
     image = cv2.imread('images/'+image_name)
+    # mask away the text on the bottom of the image
+    ymax = 650
+    xmax = 1280
+    mask = np.zeros(image.shape[:2],np.uint8) #720x1280
+    mask[0:ymax,0:xmax] = 255
+    image = cv2.bitwise_and(image,image,mask = mask)
+
     # color threshold to extract a range of white colors only that is associated with the lines on the ground
     low_threshold = 120
     high_threshold = 200
@@ -69,7 +76,26 @@ if __name__ == '__main__':
     minLen = 50
     maxGap = 20
     houghImage = houghLines(edges, rho, theta, threshold, minLen, maxGap)
-    imageToSave = cv2.cvtColor(houghImage, cv2.COLOR_RGB2BGR)
+
+    # dilate to make the lines stronger
+    dilated = cv2.dilate(houghImage, None, iterations=2)
+
+    imageToSave = cv2.cvtColor(dilated, cv2.COLOR_RGB2BGR)
     cv2.imwrite('output_images/'+image_name,imageToSave)
+    while True:
+        # for debugging
+        cv2.imshow("result", imageToSave)
+        #cv2.imshow("blurredImage", blurredImage)
+        #cv2.imshow("dilated", dilated)
+        #cv2.imshow("res", image)
+        #cv2.imshow("canny", edges)
+        #cv2.imshow("hough", houghImage)
+
+        # if the `q` key is pressed, break from the lop
+        key = cv2.waitKey(1)
+        if key == ord("q"):
+            break 
+    
+    cv2.destroyAllWindows()
 
 
