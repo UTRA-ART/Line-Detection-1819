@@ -10,6 +10,16 @@ def grayscale(img):
     where gray is the returned image from this function'''
     return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
+def normalizeColored(img):
+    hist,bins = np.histogram(img.flatten(),256,[0,256])
+    cdf = hist.cumsum()
+    cdf_normalized = cdf * hist.max()/ cdf.max()
+    # normalize histogram
+    cdf_m = np.ma.masked_equal(cdf,0)
+    cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
+    cdf = np.ma.filled(cdf_m,0).astype('uint8')
+    img2 = cdf[img]
+    return img2 
 
 def gaussianBlur(img, kernel_size):
     '''Applies a guassian noise kernel'''
@@ -85,6 +95,7 @@ if __name__ == '__main__':
     while True:
         # for debugging
         cv2.imshow("result", imageToSave)
+        #cv2.imshow("gray", grayImage)
         #cv2.imshow("blurredImage", blurredImage)
         #cv2.imshow("dilated", dilated)
         #cv2.imshow("res", image)
