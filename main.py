@@ -155,6 +155,9 @@ def draw_sliding_window_right(image):
     # Set height of the windows - based on nwindows above and image shape
     window_height = image.shape[0] // nwindows
 
+    xlist=np.empty(0)
+    ylist=np.empty(0)
+
     # Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
     nonzero = image.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -200,7 +203,10 @@ def draw_sliding_window_right(image):
             # Avoids an error if `left` and `right_fit` are still none or incorrect
             left_fitx = 1*ploty**2 + 1*ploty
 
-        return [left_fitx,ploty]
+        ylist = np.concatenate((ylist,ploty))
+        xlist = np.concatenate((xlist,left_fitx))
+
+    return [xlist,ylist]
 
         # Highlightign the left and right lane regions
         #image[lefty, leftx] = [255, 0, 0]
@@ -208,7 +214,7 @@ def draw_sliding_window_right(image):
         # Draw the lane onto the warped blank image
         #plt.plot(left_fitx,ploty, color='yellow')
 
-    return image
+    #return image
 
 def draw_sliding_window_left(image):
     #crop to bottom half of image
@@ -223,6 +229,8 @@ def draw_sliding_window_left(image):
     #min peak cutoff
     cutoff = mean+std*3
 
+    #plt.imshow(crop_img)
+    #plt.show()
     #plt.plot(histogram)
     #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
     #plt.show()
@@ -248,6 +256,9 @@ def draw_sliding_window_left(image):
     # Set height of the windows - based on nwindows above and image shape
     window_height = image.shape[0] // nwindows
 
+    xlist=np.empty(0)
+    ylist=np.empty(0)
+
     # Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
     nonzero = image.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -293,13 +304,19 @@ def draw_sliding_window_left(image):
             # Avoids an error if `left` and `right_fit` are still none or incorrect
             left_fitx = 1*ploty**2 + 1*ploty
 
-            return[left_fitx,ploty]
+        ylist = np.concatenate((ylist,ploty))
+        xlist = np.concatenate((xlist,left_fitx))
+
+    return [xlist,ylist]
+
 
         # Highlightign the left and right lane regions
-    #    image[lefty, leftx] = [255, 0, 0]
+        #image[lefty, leftx] = [255, 0, 0]
 
         # Draw the lane onto the warped blank image
-    #    plt.plot(left_fitx,ploty, color='yellow')
+        #plt.imshow(image)
+        #plt.plot(left_fitx,ploty, color='yellow')
+        #plt.show()
 
     #return image
 
@@ -388,8 +405,8 @@ def draw_sliding_window(image):
             # Avoids an error if `left` and `right_fit` are still none or incorrect
             left_fitx = 1*ploty**2 + 1*ploty
 
-        ylist = np.concatenate(ylist,ploty)
-        xlist = np.concatenate(xlist,left_fitx)
+        ylist = np.concatenate((ylist,ploty))
+        xlist = np.concatenate((xlist,left_fitx))
 
     return [xlist,ylist]
 
@@ -399,19 +416,23 @@ def draw_sliding_window(image):
 
     #return image
 
+#draw lines originating from right, left and bottom of image
 def highlight_all(image):
-    [left_fitx,ploty] = draw_sliding_window(image)
-    plt.plot(left_fitx,ploty, color='yellow')
+    try:
+        [left_fitx,ploty] = draw_sliding_window(image)
+        plt.scatter(left_fitx,ploty, 0.5,color='blue')
+    except:
+        print("highlight_all: no lines from bottom")
     try:
         [x1,plotx_left] = draw_sliding_window_left(image)
-        plt.plot(plotx_left,x1, color='yellow')
+        plt.scatter(plotx_left,x1, 0.5,color='red')
     except:
-        print("enh")
+        print("highlight_all: no lines from left")
     try:
         [x2,plotx_right]= draw_sliding_window_right(image)
-        plt.plot(plotx_right,720-x2, color='yellow')
+        plt.scatter(plotx_right,720-x2, 0.5,color='yellow')
     except:
-        print("enh")
+        print("highlight_all: no lines from right")
     return image
 
 # highlights the lane in the original video stream
