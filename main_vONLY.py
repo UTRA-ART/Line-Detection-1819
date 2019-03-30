@@ -117,192 +117,6 @@ def process_image(image):
     three_channel_thresholded_image = np.dstack((warped_image,warped_image,warped_image))*255
     return three_channel_thresholded_image
 
-def draw_sliding_window_right(image):
-    #crop to bottom half of image
-    image = np.rot90(image,k=3, axes=(0,1))
-    crop_img = image[1100:1280,0:720]
-    histogram = np.sum(crop_img[:,:,0],axis = 0)
-
-    #find peaks that are greater than the average and some standard deviation
-    mean = np.mean(histogram, axis = 0)
-    std = np.std(histogram, axis = 0)
-
-    #min peak cutoff
-    cutoff = mean+std*3
-
-    #plt.plot(histogram)
-    #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-    #plt.show()
-    
-    binsize = 10
-    maxes = list() 
-    #find peak in each bin
-    for i in range(0,binsize):
-        leftbound = int(i*720/binsize)
-        rightbound = int((i+1)*720/binsize)
-        midpoint = int((leftbound+rightbound)/2)
-        binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
-        if (binmax>cutoff):
-            maxes.append([midpoint,binmax])
-        
-    # Hyperparameters
-    # choose the number of sliding windows
-    nwindows = 20 
-    # Set the width of the windows +/- margin
-    margin = 100 
-    # Set the minimum number of the pixels to recenter the windows
-    minpix = 50
-    # Set height of the windows - based on nwindows above and image shape
-    window_height = image.shape[0] // nwindows
-
-    # Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
-    nonzero = image.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
-    # Current positions to be updated later for each window in nwindows
-    for i in range(0,len(maxes)):
-        leftx_current = maxes[i][0]
-
-        # Create empty lists to receive left and right lane pixel indices
-        left_lane_inds = []
-
-        for window in range(nwindows):
-            #Identify window boundaries in x and y
-            win_y_low = image.shape[0] - (window+1)*window_height
-            win_y_high = image.shape[0] - window*window_height
-            win_xleft_low = leftx_current - margin
-            win_xleft_high = leftx_current + margin
-
-            # Draw the windows on the visualization image
-            cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
-
-            # Identify the nonzero pixels in x and y within the window
-            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
-            # Append these indices to the lists
-            left_lane_inds.append(good_left_inds)
-            #if more than minpix pixels were found , recenter next window on their mean position
-            if len(good_left_inds) > minpix:
-                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
-        # Concatenate the arrays of indices (previously was a list of lists of pixels)
-        left_lane_inds = np.concatenate(left_lane_inds)
-
-        # Extract left and right line pixel positions
-        leftx = nonzerox[left_lane_inds]
-        lefty = nonzeroy[left_lane_inds]
-
-        # Generate x and y values for plotting
-        ploty = np.linspace(0, image.shape[0]-1, image.shape[0])
-        try:
-            # Fit a second order polynomial to each set of lane points
-            left_fit = np.polyfit(lefty, leftx, 2)
-            left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-        except TypeError:
-            # Avoids an error if `left` and `right_fit` are still none or incorrect
-            left_fitx = 1*ploty**2 + 1*ploty
-
-        return [left_fitx,ploty]
-
-        # Highlightign the left and right lane regions
-        #image[lefty, leftx] = [255, 0, 0]
-
-        # Draw the lane onto the warped blank image
-        #plt.plot(left_fitx,ploty, color='yellow')
-
-    return image
-
-def draw_sliding_window_left(image):
-    #crop to bottom half of image
-    image = np.rot90(image,k=1, axes=(0,1))
-    crop_img = image[1100:1280,0:720]
-    histogram = np.sum(crop_img[:,:,0],axis = 0)
-
-    #find peaks that are greater than the average and some standard deviation
-    mean = np.mean(histogram, axis = 0)
-    std = np.std(histogram, axis = 0)
-
-    #min peak cutoff
-    cutoff = mean+std*3
-
-    #plt.plot(histogram)
-    #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-    #plt.show()
-    
-    binsize = 10
-    maxes = list() 
-    #find peak in each bin
-    for i in range(0,binsize):
-        leftbound = int(i*720/binsize)
-        rightbound = int((i+1)*720/binsize)
-        midpoint = int((leftbound+rightbound)/2)
-        binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
-        if (binmax>cutoff):
-            maxes.append([midpoint,binmax])
-        
-    # Hyperparameters
-    # choose the number of sliding windows
-    nwindows = 20 
-    # Set the width of the windows +/- margin
-    margin = 100 
-    # Set the minimum number of the pixels to recenter the windows
-    minpix = 50
-    # Set height of the windows - based on nwindows above and image shape
-    window_height = image.shape[0] // nwindows
-
-    # Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
-    nonzero = image.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
-    # Current positions to be updated later for each window in nwindows
-    for i in range(0,len(maxes)):
-        leftx_current = maxes[i][0]
-
-        # Create empty lists to receive left and right lane pixel indices
-        left_lane_inds = []
-
-        for window in range(nwindows):
-            #Identify window boundaries in x and y
-            win_y_low = image.shape[0] - (window+1)*window_height
-            win_y_high = image.shape[0] - window*window_height
-            win_xleft_low = leftx_current - margin
-            win_xleft_high = leftx_current + margin
-
-            # Draw the windows on the visualization image
-            cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
-
-            # Identify the nonzero pixels in x and y within the window
-            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
-            # Append these indices to the lists
-            left_lane_inds.append(good_left_inds)
-            #if more than minpix pixels were found , recenter next window on their mean position
-            if len(good_left_inds) > minpix:
-                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
-        # Concatenate the arrays of indices (previously was a list of lists of pixels)
-        left_lane_inds = np.concatenate(left_lane_inds)
-
-        # Extract left and right line pixel positions
-        leftx = nonzerox[left_lane_inds]
-        lefty = nonzeroy[left_lane_inds]
-
-        # Generate x and y values for plotting
-        ploty = np.linspace(0, image.shape[0]-1, image.shape[0])
-        try:
-            # Fit a second order polynomial to each set of lane points
-            left_fit = np.polyfit(lefty, leftx, 2)
-            left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-        except TypeError:
-            # Avoids an error if `left` and `right_fit` are still none or incorrect
-            left_fitx = 1*ploty**2 + 1*ploty
-
-            return[left_fitx,ploty]
-
-        # Highlightign the left and right lane regions
-    #    image[lefty, leftx] = [255, 0, 0]
-
-        # Draw the lane onto the warped blank image
-    #    plt.plot(left_fitx,ploty, color='yellow')
-
-    #return image
-
 def draw_sliding_window(image):
     #crop to bottom half of image
     crop_img = image[600:720,0:1280]
@@ -315,9 +129,9 @@ def draw_sliding_window(image):
     #min peak cutoff
     cutoff = mean+std*3
 
-    #plt.plot(histogram)
-    #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-    #plt.show()
+    plt.plot(histogram)
+    plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
+    plt.show()
     
     binsize = 10
     maxes = list() 
@@ -340,9 +154,6 @@ def draw_sliding_window(image):
     # Set height of the windows - based on nwindows above and image shape
     window_height = image.shape[0] // nwindows
 
-    xlist=np.empty(0)
-    ylist=np.empty(0)
-
     # Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
     nonzero = image.nonzero()
     nonzeroy = np.array(nonzero[0])
@@ -362,7 +173,7 @@ def draw_sliding_window(image):
             win_xleft_high = leftx_current + margin
 
             # Draw the windows on the visualization image
-            #cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
+            cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
 
             # Identify the nonzero pixels in x and y within the window
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
@@ -388,30 +199,12 @@ def draw_sliding_window(image):
             # Avoids an error if `left` and `right_fit` are still none or incorrect
             left_fitx = 1*ploty**2 + 1*ploty
 
-        ylist = np.concatenate(ylist,ploty)
-        xlist = np.concatenate(xlist,left_fitx)
-
-    return [xlist,ylist]
-
         # Highlightign the left and right lane regions
-        #image[lefty, leftx] = [255, 0, 0]
+        image[lefty, leftx] = [255, 0, 0]
 
+        # Draw the lane onto the warped blank image
+        plt.plot(left_fitx,ploty, color='yellow')
 
-    #return image
-
-def highlight_all(image):
-    [left_fitx,ploty] = draw_sliding_window(image)
-    plt.plot(left_fitx,ploty, color='yellow')
-    try:
-        [x1,plotx_left] = draw_sliding_window_left(image)
-        plt.plot(plotx_left,x1, color='yellow')
-    except:
-        print("enh")
-    try:
-        [x2,plotx_right]= draw_sliding_window_right(image)
-        plt.plot(plotx_right,720-x2, color='yellow')
-    except:
-        print("enh")
     return image
 
 # highlights the lane in the original video stream
@@ -528,7 +321,7 @@ for i in range(0,10):
 #unwarped_image = unwarp(warped_image)
 
     test_image = process_image(image)
-    sw = highlight_all(test_image)
+    sw = draw_sliding_window(test_image)
 #un_sw = unwarp(sw)
     plt.imshow(sw)
     plt.show()
