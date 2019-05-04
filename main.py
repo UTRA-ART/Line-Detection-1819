@@ -8,7 +8,8 @@ from moviepy.editor import VideoFileClip
 
 #do some camera undistortion
 
-# Define perspective transform function
+
+# Define perspective transform functions
 def warp(undistorted_image):
     # define calibration box in source (original) and
     # destination (destination or warped) coordinates
@@ -73,46 +74,53 @@ def abs_sobel_thresh(image, orient = 'x', thresh = (0,255)):
 
 # applying both s thresholding and sobel magnitude thresholding
 def process_image(image):
+    height, width, channels = image.shape
     # first let's get rid of camera distortion
     #TODO IMPLEMENT THIS
-    undistorted_image = image
+    kernel_size = 19
+    undistorted_image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
+    # undistorted_image = image
     
     
-    # lets apply thresholding to S channel
+    # lets apply thresholding to Sat channel 
     hls_image = cv2.cvtColor(undistorted_image,cv2.COLOR_RGB2HLS)
     s_channel_image = hls_image[:,:,2]
-    thresh = (80,255)
+    thresh = (85,255)
     s_thresholded_image = np.zeros_like(s_channel_image)
     s_thresholded_image[(s_channel_image>thresh[0])&(s_channel_image < thresh[1])] = 1
-
-    #invert image
+    #invert the b/w pixels
     s_thresholded_image = cv2.bitwise_not(s_thresholded_image)
-    
-    #lets apply magnitude of sobel thresholding
-    gray = cv2.cvtColor(undistorted_image,cv2.COLOR_RGB2GRAY)
-    #gaussian blur
-    kernel_size = 19 
-    gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
 
+
+    #lets apply magnitude of sobel thresholding
+    
+    #gaussian blur
+    kernel_size = 19
+    gray = cv2.GaussianBlur(undistorted_image, (kernel_size, kernel_size), 0)
+    gray = cv2.cvtColor(gray,cv2.COLOR_RGB2GRAY)
+
+    #sobel threshold
     sobelx = cv2.Sobel(gray,cv2.CV_64F,1,0)
     sobely = cv2.Sobel(gray,cv2.CV_64F,0,1)
     abs_sobelxy = np.sqrt(sobelx**2 + sobely**2)
-    sobelxy_scaled = np.uint8(255 * abs_sobelxy / np.max(abs_sobelxy))
-    thresh_min = 50
-    thresh_max = 100
+    # sobelxy_scaled = np.uint8(255 * abs_sobelxy / np.max(abs_sobelxy))
+    sobelxy_scaled = abs_sobelxy
+    thresh_min = 30
+    thresh_max = 80
     sobel_thresholded_image = np.zeros_like(sobelxy_scaled)
     sobel_thresholded_image[(sobelxy_scaled >= thresh_min) & (sobelxy_scaled <= thresh_max)] = 1
-
-    #cv2.imshow("cropped", sobel_thresholded_image)
-    #cv2.waitKey(0)
 
     # combine two thresholds
     combined_binary = np.zeros_like(sobel_thresholded_image)
     combined_binary[(s_thresholded_image == 1)|(sobel_thresholded_image == 1)] = 1
-    
+
+
+    # Apply a median blur to the binary to de-speckle:
+    combined_binary = cv2.medianBlur(combined_binary.astype(np.uint8),7)
+
     # let's change camera pespective into bird's eye view
     warped_image = warp(combined_binary)
-    
+
     # creating a three channel  image from our 1 channel binary(B&W) Image
     three_channel_thresholded_image = np.dstack((warped_image,warped_image,warped_image))*255
     return three_channel_thresholded_image
@@ -220,8 +228,7 @@ def draw_sliding_window_left(image):
     #crop to bottom half of image
     image = np.rot90(image,k=1, axes=(0,1))
     crop_img = image[1100:1280,0:720]
-    histogram = np.sum(crop_img[:,:,0],axis = 0)
-
+    histogram = np.sum(image[:,:,0],axis = 0)
     #find peaks that are greater than the average and some standard deviation
     mean = np.mean(histogram, axis = 0)
     std = np.std(histogram, axis = 0)
@@ -229,11 +236,10 @@ def draw_sliding_window_left(image):
     #min peak cutoff
     cutoff = mean+std*3
 
-    #plt.imshow(crop_img)
-    #plt.show()
-    #plt.plot(histogram)
-    #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-    #plt.show()
+
+    # plt.plot(histogram)
+    # plt.plot([0, len(histogram)], [cutoff, cutoff], color='k', linestyle='-', linewidth=2)
+    # plt.show()
     
     binsize = 10
     maxes = list() 
@@ -250,7 +256,7 @@ def draw_sliding_window_left(image):
     # choose the number of sliding windows
     nwindows = 20 
     # Set the width of the windows +/- margin
-    margin = 100 
+    margin = 50 
     # Set the minimum number of the pixels to recenter the windows
     minpix = 50
     # Set height of the windows - based on nwindows above and image shape
@@ -278,10 +284,11 @@ def draw_sliding_window_left(image):
             win_xleft_high = leftx_current + margin
 
             # Draw the windows on the visualization image
-            cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
+            # cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
 
             # Identify the nonzero pixels in x and y within the window
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
+            
             # Append these indices to the lists
             left_lane_inds.append(good_left_inds)
             #if more than minpix pixels were found , recenter next window on their mean position
@@ -293,6 +300,9 @@ def draw_sliding_window_left(image):
         # Extract left and right line pixel positions
         leftx = nonzerox[left_lane_inds]
         lefty = nonzeroy[left_lane_inds]
+
+        # if(len(leftx) <= 50000):
+        #     continue
 
         # Generate x and y values for plotting
         ploty = np.linspace(0, image.shape[0]-1, image.shape[0])
@@ -332,9 +342,9 @@ def draw_sliding_window(image):
     #min peak cutoff
     cutoff = mean+std*3
 
-    #plt.plot(histogram)
-    #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-    #plt.show()
+    plt.plot(histogram)
+    plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
+    plt.show()
     
     binsize = 10
     maxes = list() 
@@ -346,7 +356,7 @@ def draw_sliding_window(image):
         binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
         if (binmax>cutoff):
             maxes.append([midpoint,binmax])
-        
+ 
     # Hyperparameters
     # choose the number of sliding windows
     nwindows = 20 
@@ -366,7 +376,8 @@ def draw_sliding_window(image):
     nonzerox = np.array(nonzero[1])
     # Current positions to be updated later for each window in nwindows
     for i in range(0,len(maxes)):
-        leftx_current = maxes[i][0]
+        leftx_current = maxes[i][0] # Returns the midpoint of each x window
+        # print("leftx_current has the value %s"%(leftx_current))
 
         # Create empty lists to receive left and right lane pixel indices
         left_lane_inds = []
@@ -390,7 +401,6 @@ def draw_sliding_window(image):
                 leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
         # Concatenate the arrays of indices (previously was a list of lists of pixels)
         left_lane_inds = np.concatenate(left_lane_inds)
-
         # Extract left and right line pixel positions
         leftx = nonzerox[left_lane_inds]
         lefty = nonzeroy[left_lane_inds]
@@ -428,11 +438,11 @@ def highlight_all(image):
         plt.scatter(plotx_left,x1, 0.5,color='red')
     except:
         print("highlight_all: no lines from left")
-    try:
-        [x2,plotx_right]= draw_sliding_window_right(image)
-        plt.scatter(plotx_right,720-x2, 0.5,color='yellow')
-    except:
-        print("highlight_all: no lines from right")
+    # try:
+    #     [x2,plotx_right]= draw_sliding_window_right(image)
+    #     plt.scatter(plotx_right,720-x2, 0.5,color='yellow')
+    # except:
+    #     print("highlight_all: no lines from right")
     return image
 
 # highlights the lane in the original video stream
@@ -551,6 +561,7 @@ for i in range(0,10):
     test_image = process_image(image)
     sw = highlight_all(test_image)
 #un_sw = unwarp(sw)
+    plt.title(i)
     plt.imshow(sw)
     plt.show()
 
