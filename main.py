@@ -635,7 +635,7 @@ def test():
 
         test_image= process_image(image, bboxes)
         sw = highlight_all(test_image)
-        cv2.imwrite('hough_images/'+image_name, nongray)
+        # cv2.imwrite('hough_images/'+image_name, nongray)
         plt.title(i)
         plt.imshow(sw)
         plt.show()
