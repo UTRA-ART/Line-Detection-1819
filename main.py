@@ -1,3 +1,5 @@
+#TODO filter based upon pixel colour density
+
 import time
 import glob
 import numpy as np
@@ -174,6 +176,8 @@ def draw_sliding_window_right(image):
     #min peak cutoff
     cutoff = mean+std*3
 
+    #plt.imshow(crop_img)
+    #plt.show()
     #plt.plot(histogram)
     #plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
     #plt.show()
@@ -250,19 +254,35 @@ def draw_sliding_window_right(image):
         ylist = np.concatenate((ylist,ploty))
         xlist = np.concatenate((xlist,left_fitx))
 
-    return [xlist,ylist]
+    points = np.vstack((xlist,ylist))
+    #translate points
+    points = np.array([np.add(points[0], -720/2),np.add(points[1],-1280/2)])
+    #unrotate points
+    theta = np.radians(270)
+    R = np.array(((np.cos(theta), np.sin(theta)), (np.sin(theta),np.cos(theta))))
+    points = np.matmul(R,points)
+    #untranslate points
+    points = np.array([np.flip(np.add(points[0], 1280/2)),np.add(points[1],720/2)])
+
+    #plt.clf()
+    #plt.imshow(image)
+    #plt.scatter(left_fitx,ploty, 0.5,color='yellow')
+    #plt.show()
+    
+    return points
 
         # Highlightign the left and right lane regions
         #image[lefty, leftx] = [255, 0, 0]
 
         # Draw the lane onto the warped blank image
-        #plt.plot(left_fitx,ploty, color='yellow')
 
     #return image
 
 def draw_sliding_window_left(image):
-    #crop to bottom half of image
+    #rotate image to left
     image = np.rot90(image,k=1, axes=(0,1))
+
+    #crop to bottom half of image
     crop_img = image[1100:1280,0:720]
     histogram = np.sum(image[:,:,0],axis = 0)
     #find peaks that are greater than the average and some standard deviation
@@ -352,17 +372,24 @@ def draw_sliding_window_left(image):
 
         ylist = np.concatenate((ylist,ploty))
         xlist = np.concatenate((xlist,left_fitx))
-
-    return [xlist,ylist]
+        
+    points = np.vstack((xlist,ylist))
+    #translate points
+    points = np.array([np.add(points[0], -720/2),np.add(points[1],-1280/2)])
+    #unrotate points
+    theta = np.radians(90)
+    R = np.array(((np.cos(theta), np.sin(theta)), (np.sin(theta),np.cos(theta))))
+    points = np.matmul(R,points)
+    #untranslate points
+    points = np.array([np.flip(np.add(points[0], 1280/2)),np.add(points[1],720/2)])
+    
+    return points
 
 
         # Highlightign the left and right lane regions
         #image[lefty, leftx] = [255, 0, 0]
 
         # Draw the lane onto the warped blank image
-        #plt.imshow(image)
-        #plt.plot(left_fitx,ploty, color='yellow')
-        #plt.show()
 
     #return image
 
@@ -473,8 +500,8 @@ def highlight_all(image):
     except:
         print("highlight_all: no lines from bottom")
     try:
-        [x1,plotx_left] = draw_sliding_window_left(image)
-        plt.scatter(plotx_left,x1, 0.5,color='red')
+        left_points = draw_sliding_window_left(image)
+        plt.scatter(left_points[0],left_points[1], 0.5,color='red')
     except:
         print("highlight_all: no lines from left")
     # try:
