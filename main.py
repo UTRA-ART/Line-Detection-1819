@@ -6,12 +6,17 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from moviepy.editor import VideoFileClip
 
+# source: https://medium.com/typeiqs/advanced-lane-finding-c3c8305f074
+
+# # for porting over to ROS image
+# from cv_bridge import CvBridge
+# from sensor_msgs.msg import Image
 #do some camera undistortion
 
-# bboxes = [ [(676, 826), (344, 821), (351, 1089), (608, 1102)], 
-# [(692, 1030), (374, 1118), (376, 1280), (637, 1280)],
-# [(420, 48), (225, 36), (208, 160), (408, 204)] ]
-bboxes = [ [(1, 320), (227, 720)] ]
+# assumes that coordinates start from 0,0 at top left of image
+bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},
+            {'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)}
+         ]
 
 # Define perspective transform functions
 def warp(undistorted_image):
@@ -76,35 +81,30 @@ def abs_sobel_thresh(image, orient = 'x', thresh = (0,255)):
     binary_output[(scaled_sobel >= thresh[0])&(scaled_sobel <= thresh[1])] = 1
     return binary_output
 
-# applying both s thresholding and sobel magnitude thresholding
+# Idea: Take two different types of thresholding and combine resulting binaries
 def process_image(image, bboxes):
     height, width, channels = image.shape
-    # first let's get rid of camera distortion
-    #TODO IMPLEMENT THIS
+
+    undistorted_image = image # TODO: Remove camera distortion (see Medium article)
+
+    # Apply Gaussian to undistorted image to help smooth out grass texture
     kernel_size = 19
-    undistorted_image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
-    # undistorted_image = image
+    blurred_input = cv2.GaussianBlur(undistorted_image, (kernel_size, kernel_size), 0)
     
-    
-    # lets apply thresholding to Sat channel 
-    hls_image = cv2.cvtColor(undistorted_image,cv2.COLOR_RGB2HLS)
+    # Generate Binary 1 by thresholding Saturation channel 
+    hls_image = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2HLS)
     s_channel_image = hls_image[:,:,2]
     thresh = (81,255)
     s_thresholded_image = np.zeros_like(s_channel_image)
     s_thresholded_image[(s_channel_image>thresh[0])&(s_channel_image < thresh[1])] = 1
-    #invert the b/w pixels
+    # Invert the b/w pixels
     s_thresholded_image = cv2.bitwise_not(s_thresholded_image)
-    plt.imshow(s_thresholded_image, cmap="gray")
-    plt.show()
-
-    #lets apply magnitude of sobel thresholding
+    # plt.imshow(s_thresholded_image, cmap="gray")
+    # plt.show()
     
-    #gaussian blur
-    kernel_size = 19
-    gray = cv2.GaussianBlur(undistorted_image, (kernel_size, kernel_size), 0)
-    gray = cv2.cvtColor(gray,cv2.COLOR_RGB2GRAY)
 
-    #sobel threshold
+    # Generate Binary 2 by applying Sobel thresholding
+    gray = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2GRAY)
     sobelx = cv2.Sobel(gray,cv2.CV_64F,1,0)
     sobely = cv2.Sobel(gray,cv2.CV_64F,0,1)
     abs_sobelxy = np.sqrt(sobelx**2 + sobely**2)
@@ -115,10 +115,9 @@ def process_image(image, bboxes):
     sobel_thresholded_image = np.zeros_like(sobelxy_scaled)
     sobel_thresholded_image[(sobelxy_scaled >= thresh_min) & (sobelxy_scaled <= thresh_max)] = 1
 
-    # combine two thresholds
+    # Combine two thresholds
     combined_binary = np.zeros_like(sobel_thresholded_image)
     combined_binary[(s_thresholded_image == 1)|(sobel_thresholded_image == 1)] = 1
-
 
     # Apply a median blur to the binary to de-speckle:
     combined_binary = cv2.medianBlur(combined_binary.astype(np.uint8),7)
@@ -129,12 +128,11 @@ def process_image(image, bboxes):
 
 
     ## Mask out the pylons detected in bboxes:
-    # for box in range(len(bboxes)):
-    #     # masked[bboxes[i][j][1] - 1][bboxes[i][j][0] - 1] = 0;
-    #     start_x = bboxes[box][tl][1]
-    #     fin_x = bboxes[box][br][1]
-    #     start_y = bboxes[box][tl][0]
-    #     fin_y = bboxes[box][br][0]
+    # for i in range(len(bboxes)):
+    #     start_x = bboxes[i].get('bl')[0]
+    #     fin_x = bboxes[i].get('br')[0]
+    #     start_y = bboxes[i].get('tl')[1]
+    #     fin_y = bboxes[i].get('bl')[1]
 
     #     width = fin_x - start_x
     #     height = fin_y - start_y
@@ -145,7 +143,7 @@ def process_image(image, bboxes):
     # plt.imshow(masked, cmap='gray')
     # plt.show()
 
-    # let's change camera pespective into bird's eye view
+    # Change camera pespective into bird's eye view
     warped_image = warp(masked)
     nongraywarp = warp(image)
 
@@ -154,7 +152,6 @@ def process_image(image, bboxes):
     # minLineLength = 30
     # maxLineGap = 10
     # lines = cv2.HoughLinesP(warped_image.astype(np.uint8),1,np.pi/180,15,minLineLength,maxLineGap)
-
     # for x in range(0, len(lines)):
     #     for x1,y1,x2,y2 in lines[x]:
     #         cv2.line(nongraywarp,(x1,y1),(x2,y2),(0,0,255),4) #BGR
@@ -585,6 +582,14 @@ def highlight_lane_original(image):
     weighted_image = cv2.addWeighted(image, 1.0, unwarped_image, .7, 0)
     return weighted_image
 
+def generate_video():
+    # video exporting stuff
+    clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
+    output_file_path = 'output_video.mp4'
+    input_video = VideoFileClip("input_video.mp4")
+    output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
+    output_video.write_videofile(output_file_path, audio=False)
+
 def test():
     #test stuff
     for i in range(0,10):
@@ -603,35 +608,21 @@ def test():
 
         test_image= process_image(image, bboxes)
         sw = highlight_all(test_image)
-        # cv2.imwrite('hough_images/'+image_name, nongray)
-    #un_sw = unwarp(sw)
-        # plt.title(i)
-        # plt.imshow(sw)
-        # plt.show()
+        cv2.imwrite('hough_images/'+image_name, nongray)
+        plt.title(i)
+        plt.imshow(sw)
+        plt.show()
 
 
     #out = highlight_lane_original(image)
         cv2.imwrite('output_images/'+image_name,sw)
+        # # generate ROS image
+        # bridge = CvBridge()
+        # imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
 
-    #plt.imshow(un_sw)
-    #plt.show()
-    #plt.imshow(out)
-    #plt.show()
-
-#video exporting stuff
-    #clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
-    # output_file_path = 'output_video.mp4'
-    # input_video = VideoFileClip("input_video.mp4")
-    # output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
-    # output_video.write_videofile(output_file_path, audio=False)
-
-    #find reference points
-        #plt.imshow(image)
-        #plt.plot(1010,530,'.')
-        #plt.plot(180,530,'.')
-        #plt.plot(360,250, '.')
-        #plt.plot(830,250,'.')
-        #plt.show()
-
+    # plt.imshow(un_sw)
+    # plt.show()
+    # plt.imshow(out)
+    # plt.show()
 
 test()
