@@ -1,15 +1,12 @@
-#TODO filter based upon pixel colour density
-
-import time
-import glob
-import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-from moviepy.editor import VideoFileClip
+import 	time
+import 	glob
+import 	numpy as np
+import 	cv2
+import 	matplotlib.pyplot as plt
+import 	matplotlib.image as mpimg
+from	moviepy.editor import VideoFileClip
 
 # source: https://medium.com/typeiqs/advanced-lane-finding-c3c8305f074
-
 # # for porting over to ROS image
 # from cv_bridge import CvBridge
 # from sensor_msgs.msg import Image
@@ -20,6 +17,9 @@ bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},
             {'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)}
          ]
 
+
+
+## IMAGE PROCESSING-----------
 # Define perspective transform functions
 def warp(undistorted_image):
     # define calibration box in source (original) and
@@ -58,10 +58,7 @@ def unwarp(warped_image):
                      [1000,680],
                      [400,680],
                      [400,155]])
-    #dst = np.float32([[1100,155],
-    #                 [1100,680],
-    #                 [290,680],
-    #                 [300,155]])
+
     # Compute the inverse perspective transform
     Minv = cv2.getPerspectiveTransform(dst, src)
 
@@ -70,7 +67,21 @@ def unwarp(warped_image):
 
     return unwarped
 
-# the function to take x and y gradient threshold
+# Mask out the pylons detected in bboxes:
+def apply_masking(bboxes, binary_image_to_mask):
+    for i in range(len(bboxes)):
+        start_x = bboxes[i].get('bl')[0]
+        fin_x = bboxes[i].get('br')[0]
+        start_y = bboxes[i].get('tl')[1]
+        fin_y = bboxes[i].get('bl')[1]
+
+        width = fin_x - start_x
+        height = fin_y - start_y
+        for x in range(width):
+            for y in range(height):
+                binary_image_to_mask[start_y + y - 1][start_x + x - 1] = 0
+
+# Generate binary from RGB using gradient thresholding
 def abs_sobel_thresh(image, orient = 'x', thresh = (0,255)):
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     if orient == 'x':
@@ -83,7 +94,7 @@ def abs_sobel_thresh(image, orient = 'x', thresh = (0,255)):
     binary_output[(scaled_sobel >= thresh[0])&(scaled_sobel <= thresh[1])] = 1
     return binary_output
 
-# Idea: Take two different types of thresholding and combine resulting binaries
+# Take two different types of thresholding and combine resulting binaries
 def process_image(image, bboxes):
     height, width, channels = image.shape
 
@@ -123,27 +134,9 @@ def process_image(image, bboxes):
 
     # Apply a median blur to the binary to de-speckle:
     combined_binary = cv2.medianBlur(combined_binary.astype(np.uint8),7)
-    # plt.imshow(combined_binary, cmap='gray')
-    # plt.show()
 
+    # Apply masking here TODO
     masked = combined_binary
-
-
-    ## Mask out the pylons detected in bboxes:
-    # for i in range(len(bboxes)):
-    #     start_x = bboxes[i].get('bl')[0]
-    #     fin_x = bboxes[i].get('br')[0]
-    #     start_y = bboxes[i].get('tl')[1]
-    #     fin_y = bboxes[i].get('bl')[1]
-
-    #     width = fin_x - start_x
-    #     height = fin_y - start_y
-    #     for x in range(width):
-    #         for y in range(height):
-    #             masked[start_y + y - 1][start_x + x - 1] = 0
-
-    # plt.imshow(masked, cmap='gray')
-    # plt.show()
 
     # Change camera pespective into bird's eye view
     warped_image = warp(masked)
@@ -163,6 +156,9 @@ def process_image(image, bboxes):
     three_channel_thresholded_image = np.dstack((warped_image,warped_image,warped_image))*255
     return three_channel_thresholded_image
 
+
+
+## LINE DRAWING-----------
 def draw_sliding_window_right(image):
     #crop to bottom half of image
     image = np.rot90(image,k=3, axes=(0,1))
@@ -271,12 +267,6 @@ def draw_sliding_window_right(image):
     
     return points
 
-        # Highlightign the left and right lane regions
-        #image[lefty, leftx] = [255, 0, 0]
-
-        # Draw the lane onto the warped blank image
-
-    #return image
 
 def draw_sliding_window_left(image):
     #rotate image to left
@@ -492,7 +482,7 @@ def draw_sliding_window(image):
 
     #return image
 
-#draw lines originating from right, left and bottom of image
+# Draw lines originating from right, left and bottom of thresholded binary image
 def highlight_all(image):
     try:
         [left_fitx,ploty] = draw_sliding_window(image)
@@ -511,21 +501,25 @@ def highlight_all(image):
     #     print("highlight_all: no lines from right")
     return image
 
-# highlights the lane in the original video stream
-def highlight_lane_original(image):
 
-    # process the image to undistort, apply s and sobel thresholding
+
+## VIDEO PROCESSING-----------
+# Highlights the lane in the original video stream with green rectangle
+def highlight_lane_original(image):
+    # Process the image to undistort, apply sat and sobel thresholding
     # and warp it into the bird's eye view
     processed_image = process_image(image, bboxes)
 
-    #crop to bottom half of image
+    # Crop to bottom half of image
     crop_img = processed_image[600:720,0:1280]
     histogram = np.sum(crop_img[:,:,0],axis = 0)
-    # find the peaks of the left and right halves of the histogram
+
+    # Find the peaks of the left and right halves of the histogram
     # as the starting point for the left and right lines
     midpoint = np.int(histogram.shape[0]//2)
     leftx_base = np.argmax(histogram[:midpoint])
     rightx_base = np.argmax(histogram[midpoint:])+midpoint
+
     # Hyperparameters
     # choose the number of sliding windows
     nwindows = 30
@@ -592,7 +586,7 @@ def highlight_lane_original(image):
         left_fitx = 1*ploty**2 + 1*ploty
         right_fitx = 1*ploty**2 + 1*ploty
 
-    # Highlightign the left and right lane regions
+    # Highlight the left and right lane regions
     # drawing the left and right polynomials on the lane lines
     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
@@ -602,13 +596,15 @@ def highlight_lane_original(image):
     # Draw the lane onto a blank warped image
     cv2.fillPoly(blank_image, np.int_([pts]), (0,255, 0))
 
-    # change the perspective back into the original view
+    # Transform the perspective back into the original view
     unwarped_image = unwarp(blank_image)
 
-    # add the unwarped processed image to the original image
+    # Add the unwarped processed image to the original image
     weighted_image = cv2.addWeighted(image, 1.0, unwarped_image, .7, 0)
     return weighted_image
 
+# Apply pipeline to all frames in input video and output 
+# video with green rectangle bounded by field lines
 def generate_video():
     # video exporting stuff
     clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
@@ -617,39 +613,34 @@ def generate_video():
     output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
     output_video.write_videofile(output_file_path, audio=False)
 
+
+
+## TESTING-----------
+# Test and visualize the vision pipeline on sample images
 def test():
-    #test stuff
     for i in range(0,10):
         image_name = str(i) + '.jpg'
         image = cv2.imread('images/'+image_name)
-    # crop away the text on the bottom of the image
-    #ymax = 650
-    #xmax = 1280
-    #mask = np.zeros(image.shape[:2],np.uint8) #720x1280
-    #mask[0:ymax,0:xmax] = 255
-    #image = cv2.bitwise_and(image,image,mask = mask)
-    #crop_img = image[0:650, 0:1280]
 
-    #warped_image = warp(image)
-    #unwarped_image = unwarp(warped_image)
+	    # Crop away the text on the bottom of the image
+	    #ymax = 650
+	    #xmax = 1280
+	    #mask = np.zeros(image.shape[:2],np.uint8) #720x1280
+	    #mask[0:ymax,0:xmax] = 255
+	    #image = cv2.bitwise_and(image,image,mask = mask)
+	    #crop_img = image[0:650, 0:1280]
 
         test_image= process_image(image, bboxes)
         sw = highlight_all(test_image)
-        # cv2.imwrite('hough_images/'+image_name, nongray)
+
+        # Display resulting image
         plt.title(i)
         plt.imshow(sw)
         plt.show()
 
-
-    #out = highlight_lane_original(image)
         cv2.imwrite('output_images/'+image_name,sw)
         # # generate ROS image
         # bridge = CvBridge()
         # imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
-
-    # plt.imshow(un_sw)
-    # plt.show()
-    # plt.imshow(out)
-    # plt.show()
 
 test()
