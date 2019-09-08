@@ -1,7 +1,9 @@
-# Introduction
+# ART Line Detection
 
+## Introduction
 This repository implements the vision pipeline for lane detection. Refer to the notebook for a step-by-step explanation of the implementation.
 
+## Results
 We perform lane detection on the imput images via an image processing pipeline that receives as input:
 ![alt inputimage](https://github.com/UTRA-ART/ART_Line_Detection/blob/master/images/3.jpg)
 
