@@ -2,12 +2,18 @@
 
 This repository implements the vision pipeline for lane detection used in UTRA's autonomous rover team (ART).
 
-# How to use this repository
-All the code is contained within `main.py`. Running it will process the images in `input_images/` and return the images with the detected lanes annotated onto them, found in `test/`.
-
 ## Dependencies
 * Python 3.5
 * OpenCV 3.0.0 or higher
+
+# How to use this repository
+All the code is contained within `main.py`. Running it will process the images in `input_images/` and return the images with the detected lanes annotated onto them, found in `test/`.
+
+To ensure OpenCV is installed
+1. Run `import cv2` in python3
+2. It should return with no errors
+
+Run main.py as `python3 main.py` on the bash terminal to execute line detection
 
 # Implementation details
 The lane detection is comprised of two parts:
