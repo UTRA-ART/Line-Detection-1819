@@ -3,7 +3,7 @@
 This repository implements the vision pipeline for lane detection used in UTRA's autonomous rover team (ART).
 
 ## Dependencies
-* Python 3.5
+* Python (any version)
 * OpenCV 3.0.0 or higher
 
 # How to use this repository
