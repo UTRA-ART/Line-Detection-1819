@@ -212,7 +212,11 @@ def draw_sliding_window_right(image):
 			cv2.rectangle(image,(win_xleft_low,win_y_low),(win_xleft_high,win_y_high),(0,255,0), 2)
 
 			# Identify the nonzero pixels in x and y within the window
-			good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
+			good_left_inds = \
+						((nonzeroy >= win_y_low)\
+						& (nonzeroy < win_y_high) \
+						& (nonzerox >= win_xleft_low) \
+						&  (nonzerox < win_xleft_high)).nonzero()[0]
 			# Append these indices to the lists
 			left_lane_inds.append(good_left_inds)
 			#if more than minpix pixels were found , recenter next window on their mean position
@@ -369,24 +373,29 @@ def draw_sliding_window_left(image):
 	return points
 
 def draw_sliding_window(image):
-	#crop to bottom half of image
+	
+	'''
+	Crop to bottom half of image
+	and create histogram of number of white pixels along each column
+	'''
 	crop_img = image[600:720,0:1280]
 	histogram = np.sum(crop_img[:,:,0],axis = 0)
 
-	#find peaks that are greater than the average and some standard deviation
+	# Define the threshold to apply to histogram
 	mean = np.mean(histogram, axis = 0)
 	std = np.std(histogram, axis = 0)
-
-	#min peak cutoff
 	cutoff = mean+std*3 - 150
+	binsize = 20
+	maxes = list() 
 
 	# plt.plot(histogram)
 	# plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
 	# plt.show()
 	
-	binsize = 20
-	maxes = list() 
-	#find peak in each bin
+	'''
+	Find peaks in histogram that exceed cutoff, 
+	then record midpoint of bin, as well as the value of that peak 
+	''' 
 	for i in range(0,binsize):
 		leftbound = int(i*1280/binsize)
 		rightbound = int((i+1)*1280/binsize)
@@ -396,7 +405,7 @@ def draw_sliding_window(image):
 			maxes.append([midpoint,binmax])
  
 	# Hyperparameters
-	# choose the number of sliding windows
+	# Choose the number of sliding windows
 	nwindows = 20
 	# Set the width of the windows +/- margin
 	margin = 100 
@@ -415,7 +424,6 @@ def draw_sliding_window(image):
 	# Current positions to be updated later for each window in nwindows
 	for i in range(0,len(maxes)):
 		leftx_current = maxes[i][0] # Returns the midpoint of each x window
-		# print("leftx_current has the value %s"%(leftx_current))
 
 		# Create empty lists to receive left and right lane pixel indices
 		left_lane_inds = []
@@ -432,14 +440,15 @@ def draw_sliding_window(image):
 
 			# Identify the nonzero pixels in x and y within the window
 			good_left_inds = ((nonzeroy >= win_y_low) \
-					& (nonzeroy < win_y_high) \
-					& (nonzerox >= win_xleft_low) \
-					&  (nonzerox < win_xleft_high)).nonzero()[0]
+							& (nonzeroy < win_y_high) \
+							& (nonzerox >= win_xleft_low) \
+							& (nonzerox < win_xleft_high)).nonzero()[0]
 			# Append these indices to the lists
 			left_lane_inds.append(good_left_inds)
 			#if more than minpix pixels were found , recenter next window on their mean position
 			if len(good_left_inds) > minpix:
 				leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+		
 		# Concatenate the arrays of indices (previously was a list of lists of pixels)
 		left_lane_inds = np.concatenate(left_lane_inds)
 		# Extract left and right line pixel positions
@@ -494,7 +503,6 @@ def highlight_all(image):
 	try:
 		points = draw_sliding_window_left(image)
 		# print( 'left points is ', points[0])
-		# print('points from left: ', points)
 		plt.scatter(points[0],points[1],0.5,color='red')
 	except:
 		print("highlight_all: no lines from left")
