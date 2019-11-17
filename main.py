@@ -6,23 +6,19 @@ import 	matplotlib.pyplot as plt
 import 	matplotlib.image as mpimg
 from	moviepy.editor import VideoFileClip
 
+# from obstacle import publish_obstacle_msg
 
 # # for porting over to ROS image
 # from cv_bridge import CvBridge
 # from sensor_msgs.msg import Image
-#do some camera undistortion
 
-# assumes that coordinates start from 0,0 at top left of image
+# Assumes that coordinates start from 0,0 at top left of image
 bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},																		
-			{'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)}
-		 ]
-
-
-## IMAGE PROCESSING-----------
+			{'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)} ]
 
 # Define perspective transform functions
 def warp(undistorted_image):
-	# define calibration box in source (original) and
+	# Define calibration box in source (original) and
 	# destination (destination or warped) coordinates
 	image_size = undistorted_image.shape[1::-1]
 	# Four source coordinates
@@ -38,14 +34,13 @@ def warp(undistorted_image):
 	# Compute the perspective transform M
 	M = cv2.getPerspectiveTransform(src, dst)
 
-
 	# Create the warped image - uses linear interpolation
 	warped = cv2.warpPerspective(undistorted_image, M, image_size,flags = cv2.INTER_LINEAR)
 
 	return warped
 
 def unwarp(warped_image):
-	# define calibration box in source (original) and
+	# Define calibration box in source (original) and
 	# destination (destination or warped) coordinates
 	image_size = warped_image.shape[1::-1]
 	# Four source coordinates
@@ -62,8 +57,8 @@ def unwarp(warped_image):
 	# Compute the inverse perspective transform
 	Minv = cv2.getPerspectiveTransform(dst, src)
 
-	# unwarp the warped image - uses linear interpolation
-	unwarped = cv2.warpPerspective(warped_image, Minv, image_size,flags = cv2.INTER_LINEAR)
+	# Unwarp the warped image - uses linear interpolation
+	unwarped = cv2.warpPerspective(warped_image, Minv, image_size, flags = cv2.INTER_LINEAR)
 
 	return unwarped
 
@@ -81,19 +76,6 @@ def apply_masking(bboxes, binary_image_to_mask):
 			for y in range(height):
 				binary_image_to_mask[start_y + y - 1][start_x + x - 1] = 0
 
-# Generate binary from RGB using gradient thresholding
-def abs_sobel_thresh(image, orient = 'x', thresh = (0,255)):
-	gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-	if orient == 'x':
-		sobel = cv2.Sobel(gray,cv2.CV_64F,1,0,)
-	elif orient == 'y':
-		sobel = cv2.Sobel(gray,cv2.CV_64F,0,1,)
-	abs_sobel = np.absolute(sobel)
-	scaled_sobel = np.uint8(255*abs_sobel/np.max(abs_sobel))
-	binary_output = np.zeros_like(scaled_sobel)
-	binary_output[(scaled_sobel >= thresh[0])&(scaled_sobel <= thresh[1])] = 1
-	return binary_output
-
 # Take two different types of thresholding and combine resulting binaries
 def process_image(image, bboxes):
 	height, width, channels = image.shape
@@ -106,8 +88,10 @@ def process_image(image, bboxes):
 	
 	# Generate Binary 1 by thresholding Saturation channel 
 	hls_image = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2HLS)
+	# plt.imshow(hls_image)
+	# plt.show()
 	s_channel_image = hls_image[:,:,2]
-	thresh = (81,255)
+	thresh = (81,255) # Heuristic
 	s_thresholded_image = np.zeros_like(s_channel_image)
 	s_thresholded_image[(s_channel_image>thresh[0])&(s_channel_image < thresh[1])] = 1
 	# Invert the b/w pixels
@@ -115,10 +99,11 @@ def process_image(image, bboxes):
 	# plt.imshow(s_thresholded_image, cmap="gray")
 	# plt.show()
 	
-
 	# Generate Binary 2 by applying Sobel thresholding
 	gray = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2GRAY)
+	# Gradient X
 	sobelx = cv2.Sobel(gray,cv2.CV_64F,1,0)
+	# Gradient Y
 	sobely = cv2.Sobel(gray,cv2.CV_64F,0,1)
 	abs_sobelxy = np.sqrt(sobelx**2 + sobely**2)
 	# sobelxy_scaled = np.uint8(255 * abs_sobelxy / np.max(abs_sobelxy))
@@ -128,14 +113,16 @@ def process_image(image, bboxes):
 	sobel_thresholded_image = np.zeros_like(sobelxy_scaled)
 	sobel_thresholded_image[(sobelxy_scaled >= thresh_min) & (sobelxy_scaled <= thresh_max)] = 1
 
+
+
 	# Combine two thresholds
 	combined_binary = np.zeros_like(sobel_thresholded_image)
 	combined_binary[(s_thresholded_image == 1)|(sobel_thresholded_image == 1)] = 1
-
 	# Apply a median blur to the binary to de-speckle:
 	combined_binary = cv2.medianBlur(combined_binary.astype(np.uint8),7)
-
-	# Apply masking here TODO
+	# plt.imshow(combined_binary, cmap="gray")
+	# plt.show()
+	# If we have the bboxes from the object detection, we could apply masking here
 	masked = combined_binary
 
 	# Change camera pespective into bird's eye view
@@ -152,7 +139,7 @@ def process_image(image, bboxes):
 	#         cv2.line(nongraywarp,(x1,y1),(x2,y2),(0,0,255),4) #BGR
 
 
-	# creating a three channel  image from our 1 channel binary(B&W) Image
+	# Creating a three channel  image from our 1 channel binary(B&W) Image
 	three_channel_thresholded_image = np.dstack((warped_image,warped_image,warped_image))*255
 	return three_channel_thresholded_image
 
@@ -173,11 +160,11 @@ def draw_sliding_window_right(image):
 	#min peak cutoff
 	cutoff = mean+std*3
 
-	#plt.imshow(crop_img)
-	#plt.show()
-	#plt.plot(histogram)
-	#plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
-	#plt.show()
+	# plt.imshow(crop_img)
+	# plt.show()
+	plt.plot(histogram)
+	plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
+	plt.show()
 	
 	binsize = 10
 	maxes = list() 
@@ -283,8 +270,9 @@ def draw_sliding_window_left(image):
 	# Min peak cutoff
 	cutoff = mean+std*3
 
-	# plt.plot(histogram)
+	# plt.plot([0, len(histogram)], histogram)
 	# plt.plot([0, len(histogram)], [cutoff, cutoff], color='k', linestyle='-', linewidth=2)
+	# # plt.plot([0, len(histogram)], [cutoff, cutoff], color='k', linestyle='-', linewidth=2)
 	# plt.show()
 	
 	# Partition histogram into bins and find peak in each bin
@@ -342,7 +330,7 @@ def draw_sliding_window_left(image):
 			left_lane_inds.append(good_left_inds)
 			# If recenter threshold exceeded, shift next window on the mean position of all the indices
 			if len(good_left_inds) > minpix:
-				print("good left inds exceeded min pix")
+				# print("good left inds exceeded min pix")
 				leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
 
 		# Concatenate the arrays of indices (previously was a list of lists of pixels)
@@ -505,15 +493,18 @@ def highlight_all(image):
 	points = []
 	try:
 		points = draw_sliding_window_left(image)
-		print( 'left points is ', points[0])
-		print(len(points))
+		# print( 'left points is ', points[0])
+		# print('points from left: ', points)
 		plt.scatter(points[0],points[1],0.5,color='red')
 	except:
 		print("highlight_all: no lines from left")
-	if(len(points[0]) <= 2):	
+	if(len(points) <= 2):	
 		try:
 			points = draw_sliding_window(image)
+			# print('points from bottom: ', points)
 			plt.scatter(points[0],points[1],0.5,color='blue')
+			print('points 0: ', points[0])
+			print('points 1: ', points[1])
 		except:
 			print("highlight_all: no lines from bottom")
 	# try:
@@ -522,7 +513,6 @@ def highlight_all(image):
 	# except:
 	#     print("highlight_all: no lines from right")
 	return image, points
-
 
 
 ## VIDEO PROCESSING-----------
@@ -627,45 +617,44 @@ def highlight_lane_original(image):
 # Apply pipeline to all frames in input video and output 
 # video with green rectangle bounded by field lines
 def generate_video():
-	# video exporting stuff
 	clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
 	output_file_path = 'output_video.mp4'
 	input_video = VideoFileClip("input_video.mp4")
 	output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
 	output_video.write_videofile(output_file_path, audio=False)
 
-## TESTING-----------
+## TESTING-----------no worrie
 # Test and visualize the vision pipeline on sample images
 def test():
 	for i in range(0,10):
 		image_name = str(i) + '.jpg'
 		image = cv2.imread('images/'+image_name)
 
-		# Crop away the text on the bottom of the image
-		#ymax = 650
-		#xmax = 1280
-		#mask = np.zeros(image.shape[:2],np.uint8) #720x1280
-		#mask[0:ymax,0:xmax] = 255
-		#image = cv2.bitwise_and(image,image,mask = mask)
-		#crop_img = image[0:650, 0:1280]
-
 		test_image = process_image(image, bboxes)
-		sw, points= highlight_all(test_image)
-
+		sw, points = highlight_all(test_image)
 		warped_image = warp(image)
 
 		# Display resulting image
-		plt.title(i)
-		plt.imshow(warped_image)
-		plt.savefig('output_images/'+str(i)+'.png')
-		plt.close()
-		# cv2.imwrite(final, 'output_images/'+image_name)
-
-		# cv2.imwrite('output_images/'+image_name, sw)
-		
+		# plt.title(i)
+		# plt.imshow(warped_image)
+		# plt.show()
+		# plt.savefig('test/'+str(i)+'.png')
+		# plt.close()
 
 		# # generate ROS image
 		# bridge = CvBridge()
 		# imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
 
-test()
+def unit_test():
+	image_name = '0.jpg'
+	image = cv2.imread('images/'+image_name)
+	test_image = process_image(image, bboxes)
+	sw, points = highlight_all(test_image)
+	if(len(points) > 0):
+		print('got nonempty array of points: ', points)
+
+if __name__ == '__main__':
+	print('entered main. about to call the unit test')
+	unit_test()
+
+
