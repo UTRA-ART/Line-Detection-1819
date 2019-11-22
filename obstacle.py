@@ -1,39 +1,55 @@
 #!/usr/bin/env python
 import rospy, math
 from costmap_converter.msg import ObstacleArrayMsg, ObstacleMsg
-from geometry_msgs.msg import PolygonStamped, Point32
+from geometry_msgs.msg import PolygonStamped, Point32, Point
 
 def publish_obstacle_msg(points):
-  rospy.init_node("test_obstacle_msg")
+	rospy.init_node("test_obstacle_msg")
+	pub = rospy.Publisher('/test_optim_node/obstacles', ObstacleArrayMsg, queue_size=1)
+	obstacle_msg = ObstacleArrayMsg()
+	obstacle_msg.header.stamp = rospy.Time.now()
+	obstacle_msg.header.frame_id = "odom" # CHANGE HERE: odom/map
+	lines = [[1, 2, 3], [4, 5, 6]]
+	xcoords = points[0]/100
+	ycoords = points[1]/100
 
-  pub = rospy.Publisher('/test_optim_node/obstacles', ObstacleArrayMsg, queue_size=1)
+	# xcoords = lines[0]
+	# ycoords = lines[1]
 
-  obstacle_msg = ObstacleArrayMsg()
-  obstacle_msg.header.stamp = rospy.Time.now()
-  obstacle_msg.header.frame_id = "odom" # CHANGE HERE: odom/map
+	# obstacle_msg.obstacles[0].id = 0
+	j=0
+	for idx, xcoord in enumerate(xcoords):
+		if(idx%50 == 0):
+			obstacle_msg.obstacles.append(ObstacleMsg())
+			# print('point: x= ', xcoord, ' y= ', ycoords[idx], ' idx: ', idx)
+			print(type(xcoord))
+			# Add point obstacle
+			# v1 = Point32()
+			# v1.x = xcoord
+			# v1.y = ycoords[idx]
+			# obstacle_msg.obstacles[idx].id = idx
+			obstacle_msg.obstacles[j].polygon.points = [Point()]
+			obstacle_msg.obstacles[j].polygon.points[0].x = xcoord
+			obstacle_msg.obstacles[j].polygon.points[0].y = ycoords[idx]
+			obstacle_msg.obstacles[j].polygon.points[0].z = 0
+			j = j+1
 
-  lines = [[1, 2, 3], [4, 5, 6]]
-  xcoords = lines[0]
-  ycoords = lines[1]
 
-  for idx, xcoord in enumerate(xcoords):
-    print('point: x= ', xcoord, ' y= ', ycoords[idx])
-    # Add point obstacle
-    obstacle_msg.obstacles.append(ObstacleMsg())
-    obstacle_msg.obstacles[idx].id = idx
-    obstacle_msg.obstacles[idx].polygon.points = [Point32()]
-    obstacle_msg.obstacles[idx].polygon.points[0].x = xcoord
-    obstacle_msg.obstacles[idx].polygon.points[0].y = ycoords[idx]
-    obstacle_msg.obstacles[idx].polygon.points[0].z = 0
+		# obstacle_msg.obstacles.append(ObstacleMsg())
+		# obstacle_msg.obstacles[1].id = 2
+		# v1 = Point32()
+		# v1.x = -1
+		# v1.y = -1
+		# v2 = Point32()
+		# v2.x = -0.5
+		# v2.y = -1.5
+		# v3 = Point32()
+		# v3.x = 0
+		# v3.y = -1
+		# obstacle_msg.obstacles[2].polygon.points = [v1, v2, v3]
 
-  r = rospy.Rate(10) # 10hz
-  t = 0.0
-  while not rospy.is_shutdown():
-    pub.publish(obstacle_msg)
-    r.sleep()
-
-if __name__ == '__main__':
-  try:
-    publish_obstacle_msg()
-  except rospy.ROSInterruptException:
-    pass
+	r = rospy.Rate(10) # 10hz
+	t = 0.0
+	while not rospy.is_shutdown():
+		pub.publish(obstacle_msg)
+		r.sleep()

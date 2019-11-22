@@ -1,19 +1,21 @@
+#!/usr/bin/env python
 import 	time
 import 	glob
 import 	numpy as np
 import 	cv2
 import 	matplotlib.pyplot as plt
 import 	matplotlib.image as mpimg
-from	moviepy.editor import VideoFileClip
+import os
+# from	moviepy.editor import VideoFileClip
 
-# from obstacle import publish_obstacle_msg
+from obstacle import publish_obstacle_msg
 
 # # for porting over to ROS image
 # from cv_bridge import CvBridge
 # from sensor_msgs.msg import Image
 
 # Assumes that coordinates start from 0,0 at top left of image
-bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},																		
+bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},
 			{'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)} ]
 
 # Define perspective transform functions
@@ -85,8 +87,8 @@ def process_image(image, bboxes):
 	# Apply Gaussian to undistorted image to help smooth out grass texture
 	kernel_size = 19
 	blurred_input = cv2.GaussianBlur(undistorted_image, (kernel_size, kernel_size), 0)
-	
-	# Generate Binary 1 by thresholding Saturation channel 
+
+	# Generate Binary 1 by thresholding Saturation channel
 	hls_image = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2HLS)
 	# plt.imshow(hls_image)
 	# plt.show()
@@ -98,7 +100,7 @@ def process_image(image, bboxes):
 	s_thresholded_image = cv2.bitwise_not(s_thresholded_image)
 	# plt.imshow(s_thresholded_image, cmap="gray")
 	# plt.show()
-	
+
 	# Generate Binary 2 by applying Sobel thresholding
 	gray = cv2.cvtColor(blurred_input,cv2.COLOR_RGB2GRAY)
 	# Gradient X
@@ -147,7 +149,7 @@ def process_image(image, bboxes):
 
 ## LINE DRAWING-----------
 def draw_sliding_window_right(image):
-	# Rotate img 
+	# Rotate img
 	image = np.rot90(image,k=3,axes=(0,1))
 	# plt.imshow(image)
 	crop_img = image[1100:1280,0:720]
@@ -165,9 +167,9 @@ def draw_sliding_window_right(image):
 	plt.plot(histogram)
 	plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
 	plt.show()
-	
+
 	binsize = 10
-	maxes = list() 
+	maxes = list()
 	#find peak in each bin
 	for i in range(0,binsize):
 		leftbound = int(i*720/binsize)
@@ -176,12 +178,12 @@ def draw_sliding_window_right(image):
 		binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
 		if (binmax>cutoff):
 			maxes.append([midpoint,binmax])
-		
+
 	# Hyperparameters
 	# choose the number of sliding windows
-	nwindows = 20 
+	nwindows = 20
 	# Set the width of the windows +/- margin
-	margin = 100 
+	margin = 100
 	# Set the minimum number of the pixels to recenter the windows
 	minpix = 50
 	# Set height of the windows - based on nwindows above and image shape
@@ -256,12 +258,12 @@ def draw_sliding_window_right(image):
 	#plt.imshow(image)
 	#plt.scatter(left_fitx,ploty, 0.5,color='yellow')
 	#plt.show()
-	
+
 	return points
 
 # Polyfits curve to input thresholded binary image
 def draw_sliding_window_left(image):
-	
+
 	# Rotate image CCW by 90
 	image = np.rot90(image, k=1, axes=(0,1))
 
@@ -278,11 +280,11 @@ def draw_sliding_window_left(image):
 	# plt.plot([0, len(histogram)], [cutoff, cutoff], color='k', linestyle='-', linewidth=2)
 	# # plt.plot([0, len(histogram)], [cutoff, cutoff], color='k', linestyle='-', linewidth=2)
 	# plt.show()
-	
+
 	# Partition histogram into bins and find peak in each bin
 	binsize = 10
 	# List to store midpoint row number of bin with a peak whos value exceeds cutoff
-	maxes = list() 
+	maxes = list()
 	for i in range(0,binsize):
 		leftbound = int(i*720/binsize)
 		rightbound = int((i+1)*720/binsize)
@@ -290,16 +292,16 @@ def draw_sliding_window_left(image):
 		binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
 		if (binmax>cutoff):
 			maxes.append([midpoint,binmax])
-		
+
 	# Hyperparameters
 	# Choose the number of sliding windows
-	nwindows = 20 
+	nwindows = 20
 	# Set the width of the windows +/- margin
 	margin = 50
 	# Set the minimum number of the pixels to recenter the windows
 	minpix = 50
 	# Set height of the windows, based on nwindows above and image shape
-	window_height = image.shape[0] // nwindows 
+	window_height = image.shape[0] // nwindows
 
 	xlist=np.empty(0)
 	ylist=np.empty(0)
@@ -329,7 +331,7 @@ def draw_sliding_window_left(image):
 			# Identify the nonzero pixels in x and y within the current window
 			good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)).nonzero()[0]
 			# print("good left indices are: ", ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) &  (nonzerox < win_xleft_high)))
-			
+
 			# Append these indices to the lists
 			left_lane_inds.append(good_left_inds)
 			# If recenter threshold exceeded, shift next window on the mean position of all the indices
@@ -359,7 +361,7 @@ def draw_sliding_window_left(image):
 
 		ylist = np.concatenate((ylist,ploty))
 		xlist = np.concatenate((xlist,left_fitx))
-		
+
 	points = np.vstack((xlist,ylist))
 	# Translate points
 	points = np.array([np.add(points[0], -720/2),np.add(points[1],-1280/2)])
@@ -369,11 +371,11 @@ def draw_sliding_window_left(image):
 	points = np.matmul(R,points)
 	# Untranslate points
 	points = np.array([np.flip(np.add(points[0], 1280/2)),np.add(points[1],720/2)])
-	
+
 	return points
 
 def draw_sliding_window(image):
-	
+
 	'''
 	Crop to bottom half of image
 	and create histogram of number of white pixels along each column
@@ -386,16 +388,16 @@ def draw_sliding_window(image):
 	std = np.std(histogram, axis = 0)
 	cutoff = mean+std*3 - 150
 	binsize = 20
-	maxes = list() 
+	maxes = list()
 
 	# plt.plot(histogram)
 	# plt.plot([0, len(histogram)], [mean+std*2, mean+std*2], color='k', linestyle='-', linewidth=2)
 	# plt.show()
-	
+
 	'''
-	Find peaks in histogram that exceed cutoff, 
-	then record midpoint of bin, as well as the value of that peak 
-	''' 
+	Find peaks in histogram that exceed cutoff,
+	then record midpoint of bin, as well as the value of that peak
+	'''
 	for i in range(0,binsize):
 		leftbound = int(i*1280/binsize)
 		rightbound = int((i+1)*1280/binsize)
@@ -403,12 +405,12 @@ def draw_sliding_window(image):
 		binmax = np.amax(histogram[:][leftbound:rightbound],axis=0)
 		if (binmax>cutoff):
 			maxes.append([midpoint,binmax])
- 
+
 	# Hyperparameters
 	# Choose the number of sliding windows
 	nwindows = 20
 	# Set the width of the windows +/- margin
-	margin = 100 
+	margin = 100
 	# Set the minimum number of the pixels to recenter the windows
 	minpix = 50
 	# Set height of the windows - based on nwindows above and image shape
@@ -416,7 +418,7 @@ def draw_sliding_window(image):
 
 	xlist=np.empty(0)
 	ylist=np.empty(0)
-   
+
 	# Identify the x and y positions of all nonzero (i.e. activated) pixels in the image
 	nonzero = image.nonzero()
 	nonzeroy = np.array(nonzero[0])
@@ -448,7 +450,7 @@ def draw_sliding_window(image):
 			#if more than minpix pixels were found , recenter next window on their mean position
 			if len(good_left_inds) > minpix:
 				leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
-		
+
 		# Concatenate the arrays of indices (previously was a list of lists of pixels)
 		left_lane_inds = np.concatenate(left_lane_inds)
 		# Extract left and right line pixel positions
@@ -506,7 +508,7 @@ def highlight_all(image):
 		plt.scatter(points[0],points[1],0.5,color='red')
 	except:
 		print("highlight_all: no lines from left")
-	if(len(points) <= 2):	
+	if(len(points) <= 2):
 		try:
 			points = draw_sliding_window(image)
 			# print('points from bottom: ', points)
@@ -544,7 +546,7 @@ def highlight_lane_original(image):
 	# choose the number of sliding windows
 	nwindows = 30
 	# Set the width of the windows +/- margin
-	margin = 50 
+	margin = 50
 	# Set the minimum number of the pixels to recenter the windows
 	minpix = 50
 	# Set height of the windows - based on nwindows above and image shape
@@ -622,21 +624,21 @@ def highlight_lane_original(image):
 	weighted_image = cv2.addWeighted(image, 1.0, unwarped_image, .7, 0)
 	return weighted_image
 
-# Apply pipeline to all frames in input video and output 
+# Apply pipeline to all frames in input video and output
 # video with green rectangle bounded by field lines
-def generate_video():
-	clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
-	output_file_path = 'output_video.mp4'
-	input_video = VideoFileClip("input_video.mp4")
-	output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
-	output_video.write_videofile(output_file_path, audio=False)
+# def generate_video():
+# 	clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
+# 	output_file_path = 'output_video.mp4'
+# 	input_video = VideoFileClip("input_video.mp4")
+# 	output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
+# 	output_video.write_videofile(output_file_path, audio=False)
 
 ## TESTING-----------no worrie
 # Test and visualize the vision pipeline on sample images
 def test():
 	for i in range(0,10):
 		image_name = str(i) + '.jpg'
-		image = cv2.imread('images/'+image_name)
+		image = cv2.imread('images/'+'0.jpg')
 
 		test_image = process_image(image, bboxes)
 		sw, points = highlight_all(test_image)
@@ -655,11 +657,14 @@ def test():
 
 def unit_test():
 	image_name = '0.jpg'
-	image = cv2.imread('images/'+image_name)
+	cwd = os.getcwd()
+	print(cwd)
+	image = cv2.imread('images/0.jpg')
 	test_image = process_image(image, bboxes)
 	sw, points = highlight_all(test_image)
 	if(len(points) > 0):
 		print('got nonempty array of points: ', points)
+		publish_obstacle_msg(points)
 
 if __name__ == '__main__':
 	print('entered main. about to call the unit test')
