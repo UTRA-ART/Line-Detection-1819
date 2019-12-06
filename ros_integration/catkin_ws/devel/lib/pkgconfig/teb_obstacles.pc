@@ -1,0 +1,8 @@
+prefix=/home/michelle/Documents/ART19_20/catkin_ws/devel
+
+Name: teb_obstacles
+Description: Description of teb_obstacles
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/michelle/Documents/ART19_20/catkin_ws/devel/lib 
+Requires: 
