@@ -8,7 +8,7 @@ import 	matplotlib.image as mpimg
 import os
 # from	moviepy.editor import VideoFileClip
 
-# from obstacles import publish_obstacle_msg
+from obstacles import publish_obstacle_msg
 
 # # for porting over to ROS image
 # from cv_bridge import CvBridge
@@ -664,7 +664,7 @@ def unit_test():
 			image_name = str(i) + '.jpg'
 			cwd = os.getcwd()
 			print(cwd)
-			image = cv2.imread('images/' + image_name)
+			image= cv2.imread('/home/rishikesh/ART/ART_Line_Detection/ros_integration/catkin_ws/src/teb_obstacles/images/' + image_name)
 			test_image = process_image(image, bboxes)
 			sw, points = highlight_all(test_image)
 			if(len(points) > 0):
@@ -683,6 +683,6 @@ def unit_test2():
 
 if __name__ == '__main__':
 	print('entered main. about to call the unit test')
-	unit_test2()
+	unit_test()
 
 

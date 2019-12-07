@@ -1,0 +1,4 @@
+<launch>
+    <include file="$(find teb_local_planner)/launch/test_optim_node.launch"/>
+    <node pkg="teb_obstacles" type="main.py" name="obstacle_generator" respawn="true"/>
+</launch>

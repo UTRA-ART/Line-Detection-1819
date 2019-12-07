@@ -1,2 +1,8 @@
 ros_integration/catkin_ws/build
 ros_integration/catkin_ws/devel
+
+srv/_*.py
+*.pcd
+*.pyc
+qtcreator-*
+*.user

@@ -3,7 +3,6 @@ import rospy, math
 from costmap_converter.msg import ObstacleArrayMsg, ObstacleMsg
 from geometry_msgs.msg import PolygonStamped, Point32, Point
 import time
-from main import unit_test2
 
 def publish_obstacle_msg(points):
 	rospy.init_node("test_obstacle_msg")
