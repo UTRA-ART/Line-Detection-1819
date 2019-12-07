@@ -8,12 +8,6 @@ import 	matplotlib.image as mpimg
 import os
 # from	moviepy.editor import VideoFileClip
 
-from obstacle import publish_obstacle_msg
-
-# # for porting over to ROS image
-# from cv_bridge import CvBridge
-# from sensor_msgs.msg import Image
-
 # Assumes that coordinates start from 0,0 at top left of image
 bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},
 			{'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)} ]
@@ -635,10 +629,10 @@ def highlight_lane_original(image):
 
 ## TESTING-----------no worrie
 # Test and visualize the vision pipeline on sample images
-def test():
+def detect_lanes():
 	for i in range(0,10):
 		image_name = str(i) + '.jpg'
-		image = cv2.imread('images/'+'0.jpg')
+		image = cv2.imread('input_images/'+'0.jpg')
 
 		test_image = process_image(image, bboxes)
 		sw, points = highlight_all(test_image)
@@ -655,19 +649,7 @@ def test():
 		# bridge = CvBridge()
 		# imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
 
-def unit_test():
-	image_name = '0.jpg'
-	cwd = os.getcwd()
-	print(cwd)
-	image = cv2.imread(cwd+'/images/0.jpg')
-	test_image = process_image(image, bboxes)
-	sw, points = highlight_all(test_image)
-	if(len(points) > 0):
-		print('got nonempty array of points: ', points)
-		publish_obstacle_msg(points)
-
 if __name__ == '__main__':
-	print('entered main. about to call the unit test')
-	unit_test()
+	detect_lanes()
 
 

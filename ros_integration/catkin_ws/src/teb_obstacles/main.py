@@ -6,17 +6,8 @@ import 	cv2
 import 	matplotlib.pyplot as plt
 import 	matplotlib.image as mpimg
 import os
-# from	moviepy.editor import VideoFileClip
-
-from obstacles import publish_obstacle_msg
-
-# # for porting over to ROS image
-# from cv_bridge import CvBridge
-# from sensor_msgs.msg import Image
-
-# Assumes that coordinates start from 0,0 at top left of image
-bboxes = [ {'bl': (0, 720), 'tl': (0, 385), 'tr': (370, 380), 'br': (400, 720)},
-			{'bl': (370, 290), 'tl': (370, 90), 'tr': (1060, 115), 'br': (1070, 410)} ]
+# For connecting to the ROS publisher
+from obstacle import publish_obstacle_msg
 
 # Define perspective transform functions
 def warp(undistorted_image):
@@ -144,8 +135,6 @@ def process_image(image, bboxes):
 	# Creating a three channel  image from our 1 channel binary(B&W) Image
 	three_channel_thresholded_image = np.dstack((warped_image,warped_image,warped_image))*255
 	return three_channel_thresholded_image
-
-
 
 ## LINE DRAWING-----------
 def draw_sliding_window_right(image):
@@ -524,7 +513,6 @@ def highlight_all(image):
 	#     print("highlight_all: no lines from right")
 	return image, points
 
-
 ## VIDEO PROCESSING-----------
 # Highlights the lane in the original video stream with green rectangle
 def highlight_lane_original(image):
@@ -624,16 +612,6 @@ def highlight_lane_original(image):
 	weighted_image = cv2.addWeighted(image, 1.0, unwarped_image, .7, 0)
 	return weighted_image
 
-# Apply pipeline to all frames in input video and output
-# video with green rectangle bounded by field lines
-# def generate_video():
-# 	clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
-# 	output_file_path = 'output_video.mp4'
-# 	input_video = VideoFileClip("input_video.mp4")
-# 	output_video = input_video.fl_image(highlight_lane_original) #NOTE: this function expects color images!!
-# 	output_video.write_videofile(output_file_path, audio=False)
-
-## TESTING-----------no worrie
 # Test and visualize the vision pipeline on sample images
 def test():
 	for i in range(0,10):
@@ -655,8 +633,6 @@ def test():
 		# bridge = CvBridge()
 		# imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
 
-
-
 # Every 10 seconds creates a publisher to post certain information
 def unit_test():
 	while(True):
@@ -672,7 +648,7 @@ def unit_test():
 				publish_obstacle_msg(points)
 
 
-def unit_test2():
+def unit_test():
 	image_name = '0.jpg'
 	cwd = os.getcwd()
 	print(cwd)
