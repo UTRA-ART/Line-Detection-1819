@@ -1,8 +1,0 @@
-prefix=/home/michelle/Documents/ART19_20/catkin_ws/devel
-
-Name: m2wr_description
-Description: Description of m2wr_description
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/michelle/Documents/ART19_20/catkin_ws/devel/lib 
-Requires: 

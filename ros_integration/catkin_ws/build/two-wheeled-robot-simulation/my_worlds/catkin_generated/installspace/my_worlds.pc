@@ -1,8 +1,0 @@
-prefix=/home/michelle/Documents/ART19_20/catkin_ws/install
-
-Name: my_worlds
-Description: Description of my_worlds
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/michelle/Documents/ART19_20/catkin_ws/install/lib 
-Requires: 

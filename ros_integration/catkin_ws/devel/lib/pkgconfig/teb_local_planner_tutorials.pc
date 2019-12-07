@@ -1,8 +1,0 @@
-prefix=/home/michelle/Documents/ART19_20/catkin_ws/devel
-
-Name: teb_local_planner_tutorials
-Description: Description of teb_local_planner_tutorials
-Version: 0.2.4
-Cflags: 
-Libs: -L/home/michelle/Documents/ART19_20/catkin_ws/devel/lib 
-Requires: 
