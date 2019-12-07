@@ -9,11 +9,22 @@ This repository implements the vision pipeline for lane detection used in UTRA's
 # How to use this repository
 All the code is contained within `main.py`. Running it will process the images in `input_images/` and return the images with the detected lanes annotated onto them, found in `test/`.
 
+## To just run the lane detection without ROS Publishing:
 To ensure OpenCV is installed
 1. Run `import cv2` in python3
 2. It should return with no errors
-
 Run main.py as `python3 main.py` on the bash terminal to execute line detection
+
+
+## ROS Obstacle publishing
+1. Install the `teb_local_planner` ROS package for ROS Kinetic
+2. Terminal 1: `roslaunch teb_local_planner test_optim_node.launch`
+3. Source your ws: `cd catkin_ws && source devel/setup.bash`
+4. Terminal 2: `rosrun teb_obstacles main.py`
+(Optional: to run Husky simulation in the rviz window)
+5. Terminal 3: `roslaunch husky_gazebo husky_empty_world.launch`
+6. Terminal 4: `roslaunch husky_teleop teleop.launch`
+
 
 # Implementation details
 The lane detection is comprised of two parts:
