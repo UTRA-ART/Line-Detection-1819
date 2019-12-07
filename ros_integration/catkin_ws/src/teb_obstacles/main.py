@@ -640,7 +640,7 @@ def call_ros_publisher():
 			image_name = str(i) + '.jpg'
 			cwd = os.getcwd()
 			print(cwd)
-			image = cv2.imread('images/' + image_name)
+			image= cv2.imread('/home/rishikesh/ART/ART_Line_Detection/ros_integration/catkin_ws/src/teb_obstacles/images/' + image_name)
 			test_image = process_image(image, bboxes)
 			sw, points = highlight_all(test_image)
 			if(len(points) > 0):
