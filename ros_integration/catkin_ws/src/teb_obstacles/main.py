@@ -8,7 +8,7 @@ import 	matplotlib.image as mpimg
 import os
 # from	moviepy.editor import VideoFileClip
 
-# from obstacles import publish_obstacle_msg
+from obstacles import publish_obstacle_msg
 
 # # for porting over to ROS image
 # from cv_bridge import CvBridge
@@ -683,6 +683,6 @@ def unit_test2():
 
 if __name__ == '__main__':
 	print('entered main. about to call the unit test')
-	unit_test2()
+	unit_test()
 
 

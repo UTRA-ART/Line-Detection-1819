@@ -659,7 +659,7 @@ def unit_test():
 	image_name = '0.jpg'
 	cwd = os.getcwd()
 	print(cwd)
-	image = cv2.imread('images/0.jpg')
+	image = cv2.imread(cwd+'/images/0.jpg')
 	test_image = process_image(image, bboxes)
 	sw, points = highlight_all(test_image)
 	if(len(points) > 0):
