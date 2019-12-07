@@ -634,7 +634,7 @@ def test():
 		# imgMsg = bridge.cv2_to_imgmsg(sw, "bgr8")
 
 # Every 10 seconds creates a publisher to post certain information
-def unit_test():
+def call_ros_publisher():
 	while(True):
 		for i in range(0,10):
 			image_name = str(i) + '.jpg'
@@ -647,18 +647,8 @@ def unit_test():
 				print('got nonempty array of points: ', points)
 				publish_obstacle_msg(points)
 
-
-def unit_test():
-	image_name = '0.jpg'
-	cwd = os.getcwd()
-	print(cwd)
-	image = cv2.imread('src/teb_obstacles/images/' + image_name)
-	test_image = process_image(image, bboxes)
-	sw, points = highlight_all(test_image)
-	return points
-
 if __name__ == '__main__':
 	print('entered main. about to call the unit test')
-	unit_test()
+	call_ros_publisher()
 
 
